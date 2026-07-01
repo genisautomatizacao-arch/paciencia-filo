@@ -1,7 +1,8 @@
 {
   "expo": {
-    "name": "solitaire-filo-native",
-    "slug": "solitaire-filo-native",
+    "name": "pacienciafilo",
+    "slug": "pacienciafilo",
+    "owner": "genisalmeidas-team",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -15,10 +16,16 @@
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
-      }
+      },
+      "package": "com.anonymous.solitairefilonative"
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "5cd8b8e1-6ae1-44c5-b412-06f06c2e7536"
+      }
     }
   }
 }
