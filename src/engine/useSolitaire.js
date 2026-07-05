@@ -187,9 +187,6 @@ export function useSolitaire() {
   }, [isVictory]);
 
   const [hintCard, setHintCard] = useState(null);
-  const [score, setScore] = useState(0);
-  const [timer, setTimer] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
 
   useEffect(() => {
     let interval = null;
