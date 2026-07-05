@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Animated, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -8,6 +8,27 @@ import { useGameContext } from '../context/GameContext';
 export default function MiniGamesHubScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const { xp, level, xpProgress, missions, coins, skills, achievements, isLoading } = useGameContext();
+
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const translateYAnim = useRef(new Animated.Value(50)).current;
+
+  useEffect(() => {
+    if (!isLoading) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+        Animated.spring(translateYAnim, {
+          toValue: 0,
+          friction: 6,
+          tension: 40,
+          useNativeDriver: true,
+        })
+      ]).start();
+    }
+  }, [isLoading]);
 
   if (isLoading) {
     return (
@@ -135,122 +156,123 @@ export default function MiniGamesHubScreen({ navigation }) {
             ))}
           </ScrollView>
 
-        {/* Escolha seu Jogo */}
+        {/* Escolha seu Jogo - BENTO BOX */}
         <Text style={styles.sectionTitle}>🎮 ESCOLHA SEU JOGO</Text>
         
-        <View style={styles.grid}>
-          {/* Row 1 */}
-          <View style={styles.gridRow}>
-            <TouchableOpacity 
-              style={styles.cardWrapper}
-              onPress={() => navigation.navigate('MemoryGame')}
-            >
-              <LinearGradient colors={['#064e3b', '#047857']} style={styles.card}>
-                <Text style={styles.cardIcon}>🎯</Text>
+        <Animated.View style={[styles.bentoGrid, { opacity: fadeAnim, transform: [{ translateY: translateYAnim }] }]}>
+          
+          {/* Row 1: Wide Card (Atenção) */}
+          <TouchableOpacity 
+            style={styles.bentoWide}
+            onPress={() => navigation.navigate('MemoryGame')}
+            activeOpacity={0.8}
+          >
+            <LinearGradient colors={['#064e3b', '#047857']} style={styles.card}>
+              <Image source={require('../assets/icons/icon_memory.jpg')} style={styles.bentoImage} />
+              <View style={styles.bentoContent}>
                 <Text style={styles.cardTitle}>ATENÇÃO</Text>
                 <Text style={styles.cardDesc}>Memória visual</Text>
                 <View style={[styles.playBtn, {backgroundColor: 'rgba(255,255,255,0.2)'}]}>
                   <Text style={styles.playBtnText}>JOGAR</Text>
                 </View>
-              </LinearGradient>
-            </TouchableOpacity>
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
 
+          {/* Row 2: Half Cards */}
+          <View style={styles.bentoRow}>
             <TouchableOpacity 
-              style={styles.cardWrapper}
+              style={styles.bentoHalf}
               onPress={() => navigation.navigate('WordSearch')}
+              activeOpacity={0.8}
             >
               <LinearGradient colors={['#4c1d95', '#6d28d9']} style={styles.card}>
-                <Text style={styles.cardIcon}>📖</Text>
-                <Text style={styles.cardTitle}>PALAVRAS</Text>
-                <Text style={styles.cardDesc}>Bíblico & Mais</Text>
-                <View style={[styles.playBtn, {backgroundColor: 'rgba(255,255,255,0.2)'}]}>
-                  <Text style={styles.playBtnText}>JOGAR</Text>
+                <Image source={require('../assets/icons/icon_words.jpg')} style={styles.bentoImageHalf} />
+                <View style={styles.bentoContent}>
+                  <Text style={styles.cardTitle}>PALAVRAS</Text>
+                  <Text style={styles.cardDesc}>Bíblico & Mais</Text>
                 </View>
               </LinearGradient>
             </TouchableOpacity>
-          </View>
 
-          {/* Row 2 */}
-          <View style={styles.gridRow}>
             <TouchableOpacity 
-              style={styles.cardWrapper}
+              style={styles.bentoHalf}
               onPress={() => navigation.navigate('SlidingPuzzle')}
+              activeOpacity={0.8}
             >
               <LinearGradient colors={['#78350f', '#b45309']} style={styles.card}>
-                <Text style={styles.cardIcon}>🧩</Text>
-                <Text style={styles.cardTitle}>RACIOCÍNIO</Text>
-                <Text style={styles.cardDesc}>Quebra-cabeça</Text>
-                <View style={[styles.playBtn, {backgroundColor: 'rgba(255,255,255,0.2)'}]}>
-                  <Text style={styles.playBtnText}>JOGAR</Text>
+                <Image source={require('../assets/icons/icon_puzzle.jpg')} style={styles.bentoImageHalf} />
+                <View style={styles.bentoContent}>
+                  <Text style={styles.cardTitle}>RACIOCÍNIO</Text>
+                  <Text style={styles.cardDesc}>Quebra-cabeça</Text>
                 </View>
               </LinearGradient>
             </TouchableOpacity>
+          </View>
 
+          {/* Row 3: Half Cards */}
+          <View style={styles.bentoRow}>
             <TouchableOpacity 
-              style={styles.cardWrapper}
+              style={styles.bentoHalf}
               onPress={() => navigation.navigate('DominoesGame')}
+              activeOpacity={0.8}
             >
               <LinearGradient colors={['#1e3a8a', '#1d4ed8']} style={styles.card}>
-                <Text style={styles.cardIcon}>🁣</Text>
-                <Text style={styles.cardTitle}>DOMINÓ</Text>
-                <Text style={styles.cardDesc}>vs IA</Text>
-                <View style={[styles.playBtn, {backgroundColor: 'rgba(255,255,255,0.2)'}]}>
-                  <Text style={styles.playBtnText}>JOGAR</Text>
+                <Image source={require('../assets/icons/icon_domino.jpg')} style={styles.bentoImageHalf} />
+                <View style={styles.bentoContent}>
+                  <Text style={styles.cardTitle}>DOMINÓ</Text>
+                  <Text style={styles.cardDesc}>vs IA</Text>
                 </View>
               </LinearGradient>
             </TouchableOpacity>
-          </View>
 
-          {/* Row 3 */}
-          <View style={styles.gridRow}>
             <TouchableOpacity 
-              style={styles.cardWrapper}
+              style={styles.bentoHalf}
               onPress={() => navigation.navigate('HangmanGame')}
+              activeOpacity={0.8}
             >
               <LinearGradient colors={['#831843', '#be185d']} style={styles.card}>
-                <Text style={styles.cardIcon}>🪢</Text>
-                <Text style={styles.cardTitle}>FORCA</Text>
-                <Text style={styles.cardDesc}>Forca Bíblica</Text>
-                <View style={[styles.playBtn, {backgroundColor: 'rgba(255,255,255,0.2)'}]}>
-                  <Text style={styles.playBtnText}>JOGAR</Text>
+                <Image source={require('../assets/icons/icon_hangman.jpg')} style={styles.bentoImageHalf} />
+                <View style={styles.bentoContent}>
+                  <Text style={styles.cardTitle}>FORCA</Text>
+                  <Text style={styles.cardDesc}>Forca Bíblica</Text>
                 </View>
               </LinearGradient>
             </TouchableOpacity>
+          </View>
 
+          {/* Row 4: Half Cards */}
+          <View style={styles.bentoRow}>
             <TouchableOpacity 
-              style={styles.cardWrapper}
+              style={styles.bentoHalf}
               onPress={() => navigation.navigate('BlockPuzzle')}
+              activeOpacity={0.8}
             >
               <LinearGradient colors={['#134e4a', '#0f766e']} style={styles.card}>
-                <Text style={styles.cardIcon}>🧱</Text>
-                <Text style={styles.cardTitle}>BLOCK FILÓ</Text>
-                <Text style={styles.cardDesc}>Puzzle Geométrico</Text>
-                <View style={[styles.playBtn, {backgroundColor: 'rgba(255,255,255,0.2)'}]}>
-                  <Text style={styles.playBtnText}>JOGAR</Text>
+                <Image source={require('../assets/icons/icon_block.jpg')} style={styles.bentoImageHalf} />
+                <View style={styles.bentoContent}>
+                  <Text style={styles.cardTitle}>BLOCK FILÓ</Text>
+                  <Text style={styles.cardDesc}>Puzzle Geométrico</Text>
                 </View>
               </LinearGradient>
             </TouchableOpacity>
-          </View>
 
-          {/* Row 4 */}
-          <View style={styles.gridRow}>
             <TouchableOpacity 
-              style={[styles.cardWrapper, { flex: 0.48 }]}
+              style={styles.bentoHalf}
               onPress={() => navigation.navigate('TetrisGame')}
+              activeOpacity={0.8}
             >
               <LinearGradient colors={['#312e81', '#4338ca']} style={styles.card}>
-                <Text style={styles.cardIcon}>👾</Text>
-                <Text style={styles.cardTitle}>TETRIS FILÓ</Text>
-                <Text style={styles.cardDesc}>O Clássico!</Text>
-                <View style={[styles.playBtn, {backgroundColor: 'rgba(255,255,255,0.2)'}]}>
-                  <Text style={styles.playBtnText}>JOGAR</Text>
+                <Image source={require('../assets/icons/icon_tetris.jpg')} style={styles.bentoImageHalf} />
+                <View style={styles.bentoContent}>
+                  <Text style={styles.cardTitle}>TETRIS FILÓ</Text>
+                  <Text style={styles.cardDesc}>O Clássico!</Text>
                 </View>
               </LinearGradient>
             </TouchableOpacity>
-            <View style={{ flex: 0.48 }} />
           </View>
-
-        </View>
+          
+        </Animated.View>
 
       </ScrollView>
     </View>
@@ -405,31 +427,49 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.05)',
     marginVertical: 15,
   },
-  grid: {
+  bentoGrid: {
     gap: 15,
   },
-  gridRow: {
+  bentoRow: {
     flexDirection: 'row',
     gap: 15,
   },
-  cardWrapper: {
-    width: '48%',
+  bentoWide: {
+    width: '100%',
+    marginBottom: 15,
+  },
+  bentoHalf: {
+    flex: 1,
     marginBottom: 15,
   },
   card: {
-    borderRadius: 16,
-    padding: 15,
+    borderRadius: 20,
+    overflow: 'hidden',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
     elevation: 8,
   },
-  cardIcon: {
-    fontSize: 36,
-    marginTop: 10,
-    marginBottom: 5,
+  bentoImage: {
+    width: '100%',
+    height: 120,
+    opacity: 0.9,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+  },
+  bentoImageHalf: {
+    width: '100%',
+    height: 100,
+    opacity: 0.9,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+  },
+  bentoContent: {
+    padding: 15,
+    width: '100%',
+    alignItems: 'center',
   },
   cardTitle: {
     color: '#fff',

@@ -301,7 +301,6 @@ export default function DominoesScreen({ navigation }) {
         </TouchableOpacity>
         
         {turn === 'player' && !canPlay(playerHand, board) && boneyard.length === 0 && (
-          <TouchableOpacity style={styles.passBtn} onPress={() => setTurn('ai')}>
           <TouchableOpacity style={styles.passBtn} onPress={() => { SoundManager.playPass(); setTurn('ai'); }}>
             <Text style={styles.passBtnText}>PASSAR</Text>
           </TouchableOpacity>
