@@ -1,153 +1,263 @@
 import React, { useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, Animated, PanResponder } from 'react-native';
+import { View, Text, StyleSheet, Animated, PanResponder, Image } from 'react-native';
+import * as Haptics from 'expo-haptics';
 
 const SUIT_SYMBOLS = { 'S': '♠', 'H': '♥', 'D': '♦', 'C': '♣' };
+const SUIT_COLORS  = { 'S': '#1a1a2e', 'H': '#c0392b', 'D': '#c0392b', 'C': '#1a1a2e' };
+const RED_BG       = { 'H': true, 'D': true };
 
-export default function Card({ card, index = 0, isSelected, onTap }) {
-  const pan = useRef(new Animated.ValueXY()).current;
-  
-  // Single animation value for the complex entrance flip
-  const enterVal = useRef(new Animated.Value(0)).current;
+export default function Card({
+  card,
+  index = 0,
+  isSelected,
+  onTap,
+  onDragStart,
+  onDragRelease,
+  disabled  = false,
+  isDragging = false,
+  stack = [],
+  isFoundationSlot = false,
+}) {
+  const pan      = useRef(new Animated.ValueXY()).current;
+  const scale    = useRef(new Animated.Value(1)).current;
+  const shakeVal = useRef(new Animated.Value(0)).current;
+  const glowAnim = useRef(new Animated.Value(0)).current;
 
+  // Glow pulse when selected/hint
   useEffect(() => {
-    // 3D Flip Entrance (mimics drawFlip CSS from old app)
-    Animated.timing(enterVal, {
-      toValue: 1,
-      duration: 350, // 0.35s from CSS
-      delay: index * 60,
-      useNativeDriver: false, // MUST BE FALSE to mix with pan.x (which is false)
-    }).start();
-  }, []);
-
-  // Interpolations
-  const entranceX = enterVal.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [800, 400, 0] // Flying from right
-  });
-  
-  const entranceY = enterVal.interpolate({
-    inputRange: [0, 1],
-    outputRange: [-400, 0]
-  });
-
-  const enterScale = enterVal.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [0.9, 1.1, 1]
-  });
-
-  const enterRotateY = enterVal.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: ['-180deg', '-90deg', '0deg']
-  });
+    if (isSelected) {
+      // Wiggle
+      Animated.sequence([
+        Animated.timing(shakeVal, { toValue:  6, duration: 55, useNativeDriver: false }),
+        Animated.timing(shakeVal, { toValue: -6, duration: 55, useNativeDriver: false }),
+        Animated.timing(shakeVal, { toValue:  6, duration: 55, useNativeDriver: false }),
+        Animated.timing(shakeVal, { toValue:  0, duration: 55, useNativeDriver: false }),
+      ]).start();
+      // Pulsing glow
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(glowAnim, { toValue: 1, duration: 600, useNativeDriver: false }),
+          Animated.timing(glowAnim, { toValue: 0, duration: 600, useNativeDriver: false }),
+        ])
+      ).start();
+    } else {
+      glowAnim.stopAnimation();
+      glowAnim.setValue(0);
+    }
+  }, [isSelected]);
 
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => card && card.isFaceUp,
+      onStartShouldSetPanResponder: () => !disabled && card && card.isFaceUp,
+      onMoveShouldSetPanResponder:  (_, g) =>
+        !disabled && card && card.isFaceUp && (Math.abs(g.dx) > 6 || Math.abs(g.dy) > 6),
+
       onPanResponderGrant: () => {
-        pan.setOffset({
-          x: pan.x._value,
-          y: pan.y._value
-        });
-        pan.setValue({ x: 0, y: 0 }); // Fixes the drag jump!
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        pan.setOffset({ x: 0, y: 0 });
+        pan.setValue({ x: 0, y: 0 });
+        Animated.spring(scale, { toValue: 1.08, friction: 5, useNativeDriver: false }).start();
+        if (onDragStart) onDragStart();
       },
-      onPanResponderMove: Animated.event(
-        [null, { dx: pan.x, dy: pan.y }],
-        { useNativeDriver: false }
-      ),
-      onPanResponderRelease: (e, gestureState) => {
+
+      onPanResponderMove: Animated.event([null, { dx: pan.x, dy: pan.y }], { useNativeDriver: false }),
+
+      onPanResponderRelease: (_, g) => {
         pan.flattenOffset();
-        Animated.spring(pan, { toValue: { x: 0, y: 0 }, useNativeDriver: false }).start();
-        
-        // Detect Tap (if dx and dy are small)
-        if (Math.abs(gestureState.dx) < 5 && Math.abs(gestureState.dy) < 5) {
+        Animated.spring(scale, { toValue: 1, friction: 6, useNativeDriver: false }).start();
+
+        if (Math.abs(g.dx) < 6 && Math.abs(g.dy) < 6) {
+          pan.setValue({ x: 0, y: 0 });
           if (onTap) onTap();
+        } else {
+          const wasValid = onDragRelease ? onDragRelease(g.dx, g.dy) : false;
+          if (!wasValid) {
+            // Spring back + impact shake
+            Animated.spring(pan, {
+              toValue: { x: 0, y: 0 },
+              friction: 5,
+              tension: 45,
+              useNativeDriver: false,
+            }).start(() => {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+              Animated.sequence([
+                Animated.timing(shakeVal, { toValue:  10, duration: 35, useNativeDriver: false }),
+                Animated.timing(shakeVal, { toValue: -10, duration: 35, useNativeDriver: false }),
+                Animated.timing(shakeVal, { toValue:   5, duration: 35, useNativeDriver: false }),
+                Animated.timing(shakeVal, { toValue:   0, duration: 35, useNativeDriver: false }),
+              ]).start();
+            });
+          } else {
+            pan.setValue({ x: 0, y: 0 });
+          }
         }
-      }
+      },
+
+      onPanResponderTerminate: () => {
+        Animated.spring(scale, { toValue: 1, useNativeDriver: false }).start();
+        Animated.spring(pan,   { toValue: { x: 0, y: 0 }, useNativeDriver: false }).start();
+        if (onDragRelease) onDragRelease(0, 0);
+      },
     })
   ).current;
 
+  // 3-D flip animation
+  const flipAnim = useRef(
+    new Animated.Value(card?.justDrawn ? 0 : card?.isFaceUp ? 1 : 0)
+  ).current;
+
+  useEffect(() => {
+    if (card) {
+      Animated.timing(flipAnim, {
+        toValue: card.isFaceUp ? 1 : 0,
+        duration: 320,
+        useNativeDriver: false,
+      }).start();
+    }
+  }, [card?.isFaceUp]);
+
+  const frontRotateY = flipAnim.interpolate({ inputRange: [0, 1], outputRange: ['180deg', '0deg'] });
+  const backRotateY  = flipAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg',   '180deg'] });
+
   if (!card) return null;
 
-  const animatedStyle = {
+  const glowBorder = glowAnim.interpolate({ inputRange: [0, 1], outputRange: ['rgba(212,175,55,0.4)', 'rgba(212,175,55,1)'] });
+
+  const animatedStyle = isDragging ? {} : {
     transform: [
-      { translateX: Animated.add(pan.x, entranceX) }, 
-      { translateY: Animated.add(pan.y, entranceY) }, 
-      { scale: enterScale },
-      { rotateY: enterRotateY }
+      { translateX: Animated.add(pan.x, shakeVal) },
+      { translateY: pan.y },
+      { scale },
     ],
-    zIndex: pan.x._value !== 0 || pan.y._value !== 0 ? 100 : 1
+    zIndex: (pan.x._value !== 0 || pan.y._value !== 0) ? 1000 : 1,
   };
 
-  if (!card.isFaceUp) {
-    return (
-      <Animated.View style={[styles.card, styles.cardBack, animatedStyle]}>
-        <View style={styles.cardBackInner} />
-      </Animated.View>
-    );
-  }
-
-  const color = card.color === 'red' ? '#e74c3c' : '#2c3e50';
+  const handlers = (isDragging || disabled) ? {} : panResponder.panHandlers;
+  const color     = SUIT_COLORS[card.suit] || '#000';
+  const isRed     = RED_BG[card.suit];
 
   return (
-    <Animated.View 
-      style={[
-        styles.card, 
-        animatedStyle,
-        isSelected && styles.selectedCard
-      ]}
-      {...panResponder.panHandlers}
-    >
-      <Text style={[styles.rank, { color }]}>{card.rank}</Text>
-      <Text style={[styles.suit, { color }]}>{SUIT_SYMBOLS[card.suit]}</Text>
+    <Animated.View style={[styles.cardContainer, animatedStyle]} {...handlers}>
+
+      {/* ─── BACK ─── */}
+      <Animated.View style={[
+        styles.card, styles.cardBack,
+        { transform: [{ rotateY: backRotateY }] },
+        { backfaceVisibility: 'hidden', position: 'absolute' },
+      ]}>
+        <Image source={require('../assets/card_back.jpg')} style={styles.cardImage} />
+      </Animated.View>
+
+      {/* ─── FRONT ─── */}
+      <Animated.View style={[
+        styles.card,
+        isSelected && { borderColor: glowBorder, borderWidth: 2.5,
+                        shadowColor: '#D4AF37', shadowOpacity: 0.9,
+                        shadowRadius: 10, elevation: 12 },
+        { transform: [{ rotateY: frontRotateY }] },
+        { backfaceVisibility: 'hidden' },
+      ]}>
+        {/* Top-left rank+suit */}
+        <View style={styles.cornerTop}>
+          <Text style={[styles.rankText, { color }]}>{card.rank}</Text>
+          <Text style={[styles.suitSmall, { color }]}>{SUIT_SYMBOLS[card.suit]}</Text>
+        </View>
+
+        {/* Center suit */}
+        <View style={styles.suitCenter}>
+          <Text style={[styles.suitLarge, { color, opacity: isRed ? 0.12 : 0.08 }]}>
+            {SUIT_SYMBOLS[card.suit]}
+          </Text>
+        </View>
+
+        {/* Bottom-right rank+suit (inverted) */}
+        <View style={styles.cornerBottom}>
+          <Text style={[styles.rankText, { color, transform: [{ rotate: '180deg' }] }]}>{card.rank}</Text>
+          <Text style={[styles.suitSmall, { color, transform: [{ rotate: '180deg' }] }]}>{SUIT_SYMBOLS[card.suit]}</Text>
+        </View>
+      </Animated.View>
+
+      {/* ─── STACKED cards (during drag) ─── */}
+      {stack && stack.length > 1 && stack.slice(1).map((sc, i) => {
+        const sc_color = SUIT_COLORS[sc.suit] || '#000';
+        return (
+          <View key={sc.id} style={[styles.card, styles.stackedCard, { top: (i + 1) * 26, zIndex: i + 1 }]}>
+            <View style={styles.cornerTop}>
+              <Text style={[styles.rankText, { color: sc_color }]}>{sc.rank}</Text>
+              <Text style={[styles.suitSmall, { color: sc_color }]}>{SUIT_SYMBOLS[sc.suit]}</Text>
+            </View>
+            <View style={styles.suitCenter}>
+              <Text style={[styles.suitLarge, { color: sc_color, opacity: 0.1 }]}>{SUIT_SYMBOLS[sc.suit]}</Text>
+            </View>
+          </View>
+        );
+      })}
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
+  cardContainer: {
+    width: 48,
+    height: 72,
+  },
   card: {
-    width: 50,
-    height: 75,
-    backgroundColor: '#fff',
-    borderRadius: 6, // Slightly rounder
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#fafafa',
+    borderRadius: 7,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.1)',
-    justifyContent: 'space-between',
-    padding: 4,
+    borderColor: 'rgba(0,0,0,0.18)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+    position: 'absolute',
+    overflow: 'hidden',
+  },
+  stackedCard: {
+    backgroundColor: '#f5f5f5',
+    borderColor: 'rgba(0,0,0,0.12)',
   },
   cardBack: {
-    backgroundColor: '#1A2B4C', // Dark blue from screenshot
-    borderColor: '#c0c0c0',     // Silver/White border
-    borderWidth: 2,
-    padding: 2,
+    backgroundColor: '#1A2B4C',
+    borderColor: '#8899bb',
+    borderWidth: 1.5,
   },
-  cardBackInner: {
-    flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 2,
-    borderWidth: 1,
-    borderColor: '#3A4B6C',
+  cardImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 6,
+    resizeMode: 'cover',
   },
-  rank: {
-    fontSize: 14,
-    fontWeight: 'bold',
+  cornerTop: {
+    position: 'absolute',
+    top: 3,
+    left: 4,
+    alignItems: 'center',
   },
-  suit: {
-    fontSize: 20,
-    alignSelf: 'flex-end',
-    lineHeight: 20,
+  cornerBottom: {
+    position: 'absolute',
+    bottom: 3,
+    right: 4,
+    alignItems: 'center',
   },
-  selectedCard: {
-    borderColor: '#D4AF37', // Gold glow
-    borderWidth: 3,
-    shadowColor: '#D4AF37',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 6,
-    elevation: 8,
-  }
+  rankText: {
+    fontSize: 13,
+    fontWeight: '900',
+    lineHeight: 14,
+  },
+  suitSmall: {
+    fontSize: 10,
+    lineHeight: 11,
+  },
+  suitCenter: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  suitLarge: {
+    fontSize: 38,
+  },
 });

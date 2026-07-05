@@ -26,6 +26,22 @@
       "eas": {
         "projectId": "5cd8b8e1-6ae1-44c5-b412-06f06c2e7536"
       }
-    }
+    },
+    "plugins": [
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-3940256099942544~3347511713",
+          "iosAppId": "ca-app-pub-3940256099942544~1458002511"
+        }
+      ],
+      [
+        "expo-tracking-transparency",
+        {
+          "userTrackingPermission": "Este aplicativo usa dados para fornecer anúncios personalizados."
+        }
+      ],
+      "expo-font"
+    ]
   }
 }

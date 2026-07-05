@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import SolitaireBoard from '../components/SolitaireBoard';
-import GameHUD from '../components/GameHUD';
 import MainMenuModal from '../components/MainMenuModal';
 
 export default function GamesScreen({ navigation }) {
@@ -11,15 +11,12 @@ export default function GamesScreen({ navigation }) {
   const [gameId, setGameId] = useState(1); // Used to force board remount and re-trigger animation
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <LinearGradient colors={['#064e3b', '#022c22', '#000000']} style={[styles.container, { paddingTop: insets.top }]}>
       
-      {/* Game Board */}
+      {/* Game Board (handles its own HUD now) */}
       <View style={styles.boardArea}>
-        <SolitaireBoard key={gameId} />
+        <SolitaireBoard key={gameId} onMenuPress={() => setIsMenuVisible(true)} />
       </View>
-
-      {/* Game HUD (Bottom Bar) */}
-      <GameHUD onMenuPress={() => setIsMenuVisible(true)} />
 
       {/* Main Menu Modal Overlay */}
       <MainMenuModal 
@@ -35,14 +32,13 @@ export default function GamesScreen({ navigation }) {
         onClose={() => setIsMenuVisible(false)}
       />
 
-    </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0a3d2e', // Default felt
   },
   boardArea: {
     flex: 1,

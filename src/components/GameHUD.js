@@ -1,15 +1,19 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 
-export default function GameHUD({ onMenuPress }) {
+export default function GameHUD({ onMenuPress, onUndo, onHint, canUndo }) {
   return (
     <View style={styles.hudContainer}>
-      <TouchableOpacity style={styles.hudBtn}>
+      <TouchableOpacity 
+        style={[styles.hudBtn, !canUndo && { opacity: 0.3 }]} 
+        onPress={onUndo}
+        disabled={!canUndo}
+      >
         <Text style={styles.hudIcon}>↺</Text>
         <Text style={styles.hudLabel}>VOLTAR</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.hudBtn}>
+      <TouchableOpacity style={styles.hudBtn} onPress={onHint}>
         <Text style={styles.hudIcon}>💡</Text>
         <Text style={styles.hudLabel}>DICA</Text>
       </TouchableOpacity>
